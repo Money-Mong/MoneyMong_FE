@@ -1,0 +1,42 @@
+name: MoneyMong FE CI
+
+# 워크플로우가 실행될 시점 (Trigger)
+on:
+  # 1. main 브랜치로 push가 발생할 때
+  push:
+    branches: [ main ]
+  # 2. main 브랜치를 대상으로 Pull Request가 열리거나 업데이트될 때
+  pull_request:
+    branches: [ main ]
+
+# 실행될 작업(Job) 목록
+jobs:
+  # "build-and-lint" 라는 이름의 작업
+  build-and-lint:
+    # 실행 환경 (최신 Ubuntu)
+    runs-on: ubuntu-latest
+
+    # 작업 단계 (Steps)
+    steps:
+      # 1. GitHub 저장소의 코드를 Runner로 가져옴
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Node.js 환경을 설정
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x' # 프로젝트의 Node.js 버전에 맞게 조절
+          cache: 'npm' # npm 의존성 캐싱 활성화
+
+      # 3. 의존성을 설치
+      - name: Install dependencies
+        run: npm ci # package-lock.json을 기반으로 정확하고 빠르게 설치
+
+      # 4. Linter (ESLint)를 실행
+      - name: Run linting
+        run: npm run lint
+
+      # 5. TypeScript 컴파일 및 Vite 빌드를 실행
+      - name: Run build
+        run: npm run build
