@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import type { Document, DocumentSummary } from '@/types'
+import type { Document, DocumentSummary, DocumentListResponse } from '@/types'
 import { mockDocuments, mockSummaries } from '@/lib/mockData'
 
+import { apiClient } from '@/lib/api'
+
+const API_MODE = import.meta.env.VITE_API_MODE
 // ===================================
 // 리포트 목록 조회
 // ===================================
@@ -10,10 +13,12 @@ export const useDocuments = () => {
   return useQuery({
     queryKey: ['documents'],
     queryFn: async () => {
-      // TODO: GET /api/v1/documents (백엔드 미구현)
-      // 현재는 mockData 사용
-      // 백엔드 완성 후: apiClient.get<Document[]>('/api/v1/documents')
-      return mockDocuments
+      if( API_MODE == 'real') {
+        const response = await apiClient.get<DocumentListResponse>('/api/v1/documents')
+        return response.items
+      } else {
+        return mockDocuments
+      }
     },
   })
 }
@@ -26,14 +31,15 @@ export const useDocument = (documentId: string) => {
   return useQuery({
     queryKey: ['documents', documentId],
     queryFn: async () => {
-      // TODO: GET /api/v1/documents/:id
-      // 현재는 mockData 사용
-      // 백엔드 완성 후: apiClient.get<Document>(`/api/v1/documents/${documentId}`)
-      const document = mockDocuments.find(doc => doc.id === documentId)
-      if (!document) {
-        throw new Error(`Document not found: ${documentId}`)
+      if ( API_MODE == 'real') {
+        return apiClient.get<Document>(`/api/v1/documents/${documentId}`)
+      } else {
+        const document = mockDocuments.find(doc => doc.id === documentId)
+        if (!document) {
+          throw new Error(`Document not found: ${documentId}`)
+        }
+        return document as Document
       }
-      return document as Document
     },
     enabled: !!documentId,
   })
@@ -47,14 +53,15 @@ export const useDocumentSummary = (documentId: string) => {
   return useQuery({
     queryKey: ['documents', documentId, 'summary'],
     queryFn: async () => {
-      // TODO: GET /api/v1/documents/:id/summary
-      // 현재는 mockData 사용
-      // 백엔드 완성 후: apiClient.get<DocumentSummary>(`/api/v1/documents/${documentId}/summary`)
-      const summary = mockSummaries[documentId]
-      if (!summary) {
-        throw new Error(`Document summary not found: ${documentId}`)
+      if ( API_MODE == 'real') {
+        return apiClient.get<DocumentSummary>(`/api/v1/documents/${documentId}/summary`)
+      } else {
+        const summary = mockSummaries[documentId]
+        if (!summary) {
+          throw new Error(`Document summary not found: ${documentId}`)
+        }
+        return summary as DocumentSummary
       }
-      return summary as DocumentSummary
     },
     enabled: !!documentId,
   })

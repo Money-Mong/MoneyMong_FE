@@ -1,8 +1,10 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
-import type { Conversation, CreateConversationRequest } from '@/types'
+import type { Conversation, CreateConversationRequest, ConversationListResponse } from '@/types'
 import { queryClient } from '@/lib/queryClient'
 import { mockConversations } from '@/lib/mockData'
+import { apiClient } from '@/lib/api'
 
+const API_MODE = import.meta.env.VITE_API_MODE
 // ===================================
 // 채팅 이력 목록 조회
 // ===================================
@@ -11,10 +13,12 @@ export const useConversations = () => {
   return useQuery({
     queryKey: ['conversations'],
     queryFn: async () => {
-      // TODO: GET /api/v1/conversations (백엔드 미구현)
-      // 현재는 mockData 사용
-      // 백엔드 완성 후: apiClient.get<Conversation[]>('/api/v1/conversations')
-      return mockConversations
+      if(API_MODE == 'real') {
+        const response = await apiClient.get<ConversationListResponse>('/api/v1/conversations')
+        return response.items
+      } else {
+        return mockConversations
+      }
     },
   })
 }
@@ -27,14 +31,15 @@ export const useConversation = (conversationId: string) => {
   return useQuery({
     queryKey: ['conversations', conversationId],
     queryFn: async () => {
-      // TODO: GET /api/v1/conversations/:id (백엔드 미구현)
-      // 현재는 mockData 사용
-      // 백엔드 완성 후: apiClient.get<Conversation>(`/api/v1/conversations/${conversationId}`)
-      const conversation = mockConversations.find(conv => conv.id === conversationId)
-      if (!conversation) {
-        throw new Error(`Conversation not found: ${conversationId}`)
+      if(API_MODE == 'real') {
+        return apiClient.get<Conversation>(`/api/v1/conversations/${conversationId}`)
+      } else {
+        const conversation = mockConversations.find(conv => conv.id === conversationId)
+        if (!conversation) {
+          throw new Error(`Conversation not found: ${conversationId}`)
+        }
+        return conversation
       }
-      return conversation
     },
     enabled: !!conversationId,
   })
@@ -47,14 +52,27 @@ export const useConversation = (conversationId: string) => {
 export const useCreateConversation = () => {
   return useMutation({
     mutationFn: async (data: CreateConversationRequest) => {
-      // TODO: POST /api/v1/conversations
-      // - session_type: 'general' | 'report_based'
-      // - primary_document_id (optional)
-      console.log('Create conversation:', data) // 임시로 사용
+
+      console.log('Create conversation:', data)
+      if(API_MODE == 'real') {
+        const response = await apiClient.post<Conversation>('/api/v1/conversations', data)
+        return response
+      } else {
+        const newConversation: Conversation = {
+          id: `mock-conv-${mockConversations.length+1}`,
+          title: data.title|| '신규 Mock 대화',
+          user_id: '',
+          session_type: 'general',
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+        mockConversations.push(newConversation)
+        return newConversation
+      }
       return {} as Conversation
     },
     onSuccess: () => {
-      // TODO: conversations 목록 다시 조회
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     },
   })
