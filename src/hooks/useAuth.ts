@@ -38,7 +38,10 @@ export const useGoogleCallback = () => {
 // 로그아웃
 // ===================================
 
-export const useLogout = () => {
+export const useLogout = (options?: {
+  onSuccess?: () => void
+  onError?: () => void
+}) => {
   return useMutation({
     mutationFn: async () => {
       try {
@@ -49,5 +52,7 @@ export const useLogout = () => {
         window.location.href = '/'
       }
     },
+    onSuccess: options?.onSuccess,
+    onError: options?.onError,
   })
 }
