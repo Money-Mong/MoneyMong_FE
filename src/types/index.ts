@@ -124,9 +124,21 @@ export interface CreateConversationRequest {
 }
 
 export interface SendMessageRequest {
-  conversation_id: string
-  content: string
+  content: string  // conversation_id는 URL 파라미터로 전달
 }
+
+// ===================================
+// API Response Types (Backend 페이지네이션 구조)
+// ===================================
+
+export interface PaginatedResponse<T> {
+  total: number
+  items: T[]
+}
+
+export type DocumentListResponse = PaginatedResponse<Document>
+export type ConversationListResponse = PaginatedResponse<Conversation>
+export type MessageListResponse = PaginatedResponse<Message>
 
 // ===================================
 // UI State Types
