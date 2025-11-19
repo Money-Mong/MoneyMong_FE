@@ -124,7 +124,8 @@ export interface CreateConversationRequest {
 }
 
 export interface SendMessageRequest {
-  content: string  // conversation_id는 URL 파라미터로 전달
+  content: string
+  user_level?: 'beginner' | 'intermediate' | 'advanced'
 }
 
 // ===================================
@@ -161,3 +162,10 @@ export interface ChatInputState {
 export interface MockDocument extends Document {
   importance?: 'high' | 'medium' | 'low'  // 갤러리 크기 결정용
 }
+
+// ===================================
+// Chat Types
+// ===================================
+
+export type { UserLevel } from './chat'
+export { USER_LEVEL_LABELS, USER_LEVEL_DESCRIPTIONS } from './chat'

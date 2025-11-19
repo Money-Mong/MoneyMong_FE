@@ -15,7 +15,7 @@ import { ChatInput } from '@/components/chat/ChatInput'
 import { AssistantMessage } from '@/components/chat/AssistantMessage'
 import { UserMessage } from '@/components/chat/UserMessage'
 // import { mockMessages } from '@/lib/mockData' // 더 이상 필요 없음
-import type { Message } from '@/types'
+import type { Message, UserLevel } from '@/types'
 
 // Search params 타입 정의
 type ChatSearch = {
@@ -65,7 +65,7 @@ function ChatComponent() {
     setInputValue(question)
   }
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, userLevel: UserLevel) => {
     if (!content.trim() || isSendingMessage || isCreatingConversation) {
       return // 내용이 없거나 이미 전송 중이면 아무것도 하지 않음
     }
@@ -109,7 +109,7 @@ function ChatComponent() {
 
       // 2. 메시지 전송
       if (currentConversationId) {
-        await sendMessage({ conversationId: currentConversationId, content })
+        await sendMessage({ conversationId: currentConversationId, user_level: userLevel, content })
       } else {
         // 이 경우는 발생해서는 안 되지만, 혹시 모를 상황 대비
         console.error("메시지를 보낼 대화 ID를 찾을 수 없습니다.")
