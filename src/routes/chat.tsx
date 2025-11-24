@@ -16,7 +16,7 @@ import { ChatInput } from '@/components/chat/ChatInput'
 import { AssistantMessage } from '@/components/chat/AssistantMessage'
 import { UserMessage } from '@/components/chat/UserMessage'
 import { PdfViewer } from '@/components/chat/PdfViewer'
-import type { Message, UserLevel, DocumentSummary as Summary, Document } from '@/types'
+import type { Message, UserLevel, DocumentSummary as Summary } from '@/types'
 
 // Search params 타입 정의
 type ChatSearch = {
