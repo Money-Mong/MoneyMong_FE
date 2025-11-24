@@ -107,6 +107,7 @@ export const ReportGallery = () => {
 
   // --- 에러 상태 ---
   if (error) {
+    console.log(error)
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center max-w-md">
@@ -289,11 +290,10 @@ export const ReportGallery = () => {
             <button
               key={pageNumber}
               onClick={() => setPage(pageNumber)}
-              className={`px-3 py-1.5 rounded-lg text-sm ${
-                pageNumber === page
+              className={`px-3 py-1.5 rounded-lg text-sm ${pageNumber === page
                   ? 'bg-slate-900 text-white'
                   : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-              }`}
+                }`}
             >
               {pageNumber}
             </button>
