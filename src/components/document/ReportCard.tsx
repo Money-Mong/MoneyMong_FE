@@ -128,6 +128,7 @@ export const ReportCard = ({ document }: ReportCardProps) => {
           )}
         </div>
 
+        {/* Summary Section */}
         {summaryPreview && (
           <p className="mt-3 text-sm text-slate-600 leading-relaxed line-clamp-3">
             {summaryPreview}

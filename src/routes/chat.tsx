@@ -147,14 +147,14 @@ function ChatComponent() {
         )}
         {isProcessing && (isSendingMessage || isCreatingConversation) && (
           <div className="py-6">
-             <div className="flex items-center gap-2 text-slate-600">
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                </div>
-                <span className="text-sm">AI가 답변을 생성하고 있습니다...</span>
+            <div className="flex items-center gap-2 text-slate-600">
+              <div className="flex gap-1">
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
               </div>
+              <span className="text-sm">AI가 답변을 생성하고 있습니다...</span>
+            </div>
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -200,9 +200,9 @@ function ChatComponent() {
         {activeTab === 'summary' && summary && <DocumentSummary summary={summary} />}
         {activeTab === 'pdf' && document?.file_path && <PdfViewer fileUrl={document.file_path} />}
         {activeTab === 'pdf' && !document?.file_path && (
-            <div className="p-4 text-center text-sm text-slate-500">
-                PDF 경로를 찾을 수 없습니다.
-            </div>
+          <div className="p-4 text-center text-sm text-slate-500">
+            PDF 경로를 찾을 수 없습니다.
+          </div>
         )}
       </div>
     </div>
@@ -216,11 +216,11 @@ function ChatComponent() {
   const summaryPanelContent = summary ? <DocumentSummary summary={summary} /> : null
   const pdfPanelContent = document?.file_path ? (
     <PdfViewer fileUrl={document.file_path} />
-    ) : (
+  ) : (
     <div className="p-4 text-center text-sm text-slate-500">
       PDF 경로를 찾을 수 없습니다.
     </div>
-    )
+  )
 
   // With document: Render responsive layout
   return (
@@ -284,28 +284,116 @@ function ChatComponent() {
 // ===================================
 
 function DocumentSummary({ summary }: { summary: Summary }) {
+  const sanitizeTaggedText = (text: string | undefined) => {
+    if (!text) return ''
+    return text.replace(/<[^>]*>/g, '').trim()
+  }
+
+  const extractTagContent = (text: string | undefined, tag: string) => {
+    if (!text) return ''
+    const regex = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'i')
+    const match = text.match(regex)
+    if (match?.[1]) {
+      return match[1].trim()
+    }
+    return ''
+  }
+
+  const extractList = (text: string | undefined, parentTag: string, childTag: string) => {
+    const parentContent = extractTagContent(text, parentTag)
+    if (!parentContent) return []
+    const regex = new RegExp(`<${childTag}>([\\s\\S]*?)<\\/${childTag}>`, 'gi')
+    const matches = parentContent.match(regex)
+    if (!matches) return []
+    return matches.map((m) =>
+      m.replace(new RegExp(`<${childTag}>|<\\/${childTag}>`, 'gi'), '').trim(),
+    )
+  }
+
+  const mainTopic = extractTagContent(summary.summary_long, 'main_topic')
+  const keyPoints = extractList(summary.summary_long, 'key_points', 'key_point')
+  const keyTerms = extractList(summary.summary_long, 'key_terms', 'key_term')
+
+  // Fallback if no XML structure is found
+  if (!mainTopic && keyPoints.length === 0 && keyTerms.length === 0) {
+    return (
+      <div className="p-5">
+        <h2 className="text-lg font-semibold text-slate-900 mb-3">문서 요약</h2>
+        <p className="text-sm text-slate-700 leading-relaxed mb-4">
+          {sanitizeTaggedText(summary.summary_long)}
+        </p>
+
+        {summary.key_points && summary.key_points.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-slate-600 uppercase tracking-wide mb-2">
+              핵심 포인트
+            </p>
+            <ul className="space-y-1">
+              {summary.key_points.map((point, index) => (
+                <li
+                  key={index}
+                  className="text-sm text-slate-700 flex items-start gap-2"
+                >
+                  <span className="text-emerald-600 mt-1">•</span>
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="p-5">
-      <h2 className="text-lg font-semibold text-slate-900 mb-3">
-        문서 요약
-      </h2>
-      <p className="text-sm text-slate-700 leading-relaxed mb-4">
-        {summary.summary_long}
-      </p>
+      <h2 className="text-lg font-semibold text-slate-900 mb-4">문서 요약</h2>
 
-      {summary.key_points && summary.key_points.length > 0 && (
-        <div>
-          <p className="text-xs font-medium text-slate-600 uppercase tracking-wide mb-2">
-            핵심 포인트
+      {mainTopic && (
+        <div className="mb-6">
+          <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+            핵심 주제
+          </div>
+          <p className="text-sm text-slate-800 font-medium leading-relaxed bg-emerald-50 p-3 rounded-md border border-emerald-100">
+            {mainTopic}
           </p>
-          <ul className="space-y-1">
-            {summary.key_points.map((point, index) => (
-              <li key={index} className="text-sm text-slate-700 flex items-start gap-2">
-                <span className="text-emerald-600 mt-1">•</span>
-                <span>{point}</span>
+        </div>
+      )}
+
+      {keyPoints.length > 0 && (
+        <div className="mb-6">
+          <p className="text-xs font-medium text-slate-600 uppercase tracking-wide mb-2">
+            핵심 정보
+          </p>
+          <ul className="space-y-2">
+            {keyPoints.map((point, index) => (
+              <li
+                key={index}
+                className="text-sm text-slate-700 flex items-start gap-2"
+              >
+                <span className="text-emerald-600 mt-1.5 shrink-0">•</span>
+                <span className="leading-relaxed">{point}</span>
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {keyTerms.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-slate-600 uppercase tracking-wide mb-2">
+            주요 용어
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {keyTerms.map((term, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700"
+              >
+                {term}
+              </span>
+            ))}
+          </div>
         </div>
       )}
     </div>
