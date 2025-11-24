@@ -8,11 +8,11 @@
  */
 
 import { Link } from '@tanstack/react-router'
-import { FileText, Calendar, User } from 'lucide-react'
-import type { Document } from '@/types'
+import { FileText, Calendar, User, Building2, ListChecks } from 'lucide-react'
+import type { DocumentWithSummary } from '@/types'
 
 interface ReportCardProps {
-  document: Document
+  document: DocumentWithSummary
 }
 
 export const ReportCard = ({ document }: ReportCardProps) => {
@@ -23,6 +23,50 @@ export const ReportCard = ({ document }: ReportCardProps) => {
   //    - failed: 에러 메시지
   // 2. source_type별 아이콘 다르게 표시 (pdf, url, text)
   // 3. hover 애니메이션 개선 (transform scale 등)
+
+  const sanitizeTaggedText = (text: string | undefined) => {
+    if (!text) return ''
+    return text.replace(/<[^>]*>/g, '').trim()
+  }
+
+  const extractTagContent = (text: string | undefined, tag: string) => {
+    if (!text) return ''
+    const regex = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'i')
+    const match = text.match(regex)
+    if (match?.[1]) {
+      return match[1].trim()
+    }
+    return ''
+  }
+
+  const summary = document.summary
+
+  const summaryEntities = summary?.entities as Record<string, unknown> | undefined
+  let mainCompany: string | undefined
+  const rawCompany = summaryEntities?.['main_company']
+  if (typeof rawCompany === 'string') {
+    mainCompany = rawCompany
+  } else if (Array.isArray(rawCompany) && typeof rawCompany[0] === 'string') {
+    mainCompany = rawCompany[0]
+  }
+
+  const rawKeywords = summaryEntities?.['keywords']
+  let keywords: string[] = []
+  if (Array.isArray(rawKeywords)) {
+    keywords = rawKeywords
+      .map((kw) => (typeof kw === 'string' ? sanitizeTaggedText(kw) : ''))
+      .filter((kw): kw is string => kw.length > 0)
+  } else if (typeof rawKeywords === 'string') {
+    const cleaned = sanitizeTaggedText(rawKeywords)
+    if (cleaned) {
+      keywords = [cleaned]
+    }
+  }
+  const topKeywords = keywords.slice(0, 3)
+
+  const mainTopic = extractTagContent(summary?.summary_short, 'main_topic')
+  const summaryPreview =
+    mainTopic || sanitizeTaggedText(summary?.summary_short)
 
   return (
     <Link
@@ -75,16 +119,43 @@ export const ReportCard = ({ document }: ReportCardProps) => {
               <span>{new Date(document.published_date).toLocaleDateString('ko-KR')}</span>
             </div>
           )}
+
+          {mainCompany && (
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4" />
+              <span>{mainCompany}</span>
+            </div>
+          )}
         </div>
 
+        {summaryPreview && (
+          <p className="mt-3 text-sm text-slate-600 leading-relaxed line-clamp-3">
+            {summaryPreview}
+          </p>
+        )}
+
         {/* Footer */}
-        <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>
-            {document.total_pages ? `${document.total_pages}페이지` : document.language}
-          </span>
-          <span className="text-emerald-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-            분석하기 →
-          </span>
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-wrap gap-2 text-xs text-slate-600">
+              {topKeywords.length > 0 ? (
+                topKeywords.map((keyword, index) => (
+                  <span
+                    key={`${document.id}-keyword-${index}`}
+                    className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-emerald-700"
+                  >
+                    <ListChecks className="w-3 h-3" />
+                    {keyword}
+                  </span>
+                ))
+              ) : (
+                <span className="text-slate-500">키워드 정보 없음</span>
+              )}
+            </div>
+            <span className="text-emerald-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              분석하기 →
+            </span>
+          </div>
         </div>
       </article>
     </Link>
