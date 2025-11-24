@@ -137,7 +137,7 @@ export interface PaginatedResponse<T> {
   items: T[]
 }
 
-export type DocumentListResponse = PaginatedResponse<Document>
+export type DocumentListResponse = PaginatedResponse<DocumentWithSummary>
 export type ConversationListResponse = PaginatedResponse<Conversation>
 export type MessageListResponse = PaginatedResponse<Message>
 
