@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from 'react'
 import { clsx } from 'clsx'
 import { useDocument, useDocumentSummary } from '@/hooks/useDocuments'
 import { useMessages, useSendMessage } from '@/hooks/useMessages'
-import { useCreateConversation } from '@/hooks/useConversations'
+import { useCreateConversation, useConversation } from '@/hooks/useConversations'
 import { ChatInput } from '@/components/chat/ChatInput'
 import { AssistantMessage } from '@/components/chat/AssistantMessage'
 import { UserMessage } from '@/components/chat/UserMessage'
@@ -39,8 +39,15 @@ function ChatComponent() {
   // ===================================
   // 데이터 조회 Hooks
   // ===================================
-  const { data: summary, isLoading: summaryLoading } = useDocumentSummary(documentId || '')
-  const { data: document, isLoading: documentLoading } = useDocument(documentId || '')
+
+  // 대화 상세 정보 조회 (기존 대화인 경우)
+  const { data: conversation } = useConversation(conversationId || '')
+
+  // 유효한 documentId 결정 (URL 파라미터 우선, 없으면 대화 정보에서 가져옴)
+  const effectiveDocumentId = documentId || conversation?.primary_document_id || ''
+
+  const { data: summary, isLoading: summaryLoading } = useDocumentSummary(effectiveDocumentId)
+  const { data: document, isLoading: documentLoading } = useDocument(effectiveDocumentId)
   const { data: fetchedMessages, isLoading: messagesLoading } = useMessages(conversationId || '')
   const { mutateAsync: sendMessage, isPending: isSendingMessage } = useSendMessage()
   const { mutateAsync: createConversation, isPending: isCreatingConversation } = useCreateConversation()
@@ -96,14 +103,14 @@ function ChatComponent() {
     try {
       if (!currentConversationId) {
         const newConversation = await createConversation({
-          session_type: documentId ? 'report_based' : 'general',
-          primary_document_id: documentId,
+          session_type: effectiveDocumentId ? 'report_based' : 'general',
+          primary_document_id: effectiveDocumentId || undefined,
           title: content.substring(0, 50) + '...',
         })
         currentConversationId = newConversation.id
 
         // 새 대화 ID로 URL 업데이트 (documentId 유지)
-        navigate({ to: '/chat', search: { documentId, conversationId: newConversation.id } })
+        navigate({ to: '/chat', search: { documentId: effectiveDocumentId || undefined, conversationId: newConversation.id } })
       }
 
       if (currentConversationId) {
@@ -121,7 +128,7 @@ function ChatComponent() {
   // 렌더링 로직
   // ===================================
   const isProcessing = summaryLoading || messagesLoading || isSendingMessage || isCreatingConversation || documentLoading
-  const isInitialLoading = (summaryLoading || documentLoading) && documentId
+  const isInitialLoading = (summaryLoading || documentLoading) && effectiveDocumentId
 
   if (isInitialLoading) {
     return (
@@ -166,7 +173,7 @@ function ChatComponent() {
         disabled={isProcessing}
         value={inputValue}
         onValueChange={setInputValue}
-        placeholder={documentId ? '문서에 대해 질문해보세요...' : '메시지를 입력하세요...'}
+        placeholder={effectiveDocumentId ? '문서에 대해 질문해보세요...' : '메시지를 입력하세요...'}
       />
     </div>
   )
@@ -196,9 +203,23 @@ function ChatComponent() {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto">
-        {activeTab === 'summary' && summary && <DocumentSummary summary={summary} />}
-        {activeTab === 'pdf' && document?.file_path && <PdfViewer fileUrl={document.file_path} />}
+      <div className="flex-1 overflow-y-auto relative">
+        {summary && (
+          <div className={clsx(
+            "absolute inset-0 overflow-y-auto",
+            activeTab === 'summary' ? "z-10" : "z-0 pointer-events-none opacity-0"
+          )}>
+            <DocumentSummary summary={summary} />
+          </div>
+        )}
+        {document?.file_path && (
+          <div className={clsx(
+            "absolute inset-0",
+            activeTab === 'pdf' ? "z-10" : "z-0 pointer-events-none opacity-0"
+          )}>
+            <PdfViewer fileUrl={document.file_path} />
+          </div>
+        )}
         {activeTab === 'pdf' && !document?.file_path && (
           <div className="p-4 text-center text-sm text-slate-500">
             PDF 경로를 찾을 수 없습니다.
@@ -209,18 +230,9 @@ function ChatComponent() {
   )
 
   // No document: Render only chat area
-  if (!documentId) {
+  if (!effectiveDocumentId) {
     return <div className="h-full">{chatArea}</div>;
   }
-
-  const summaryPanelContent = summary ? <DocumentSummary summary={summary} /> : null
-  const pdfPanelContent = document?.file_path ? (
-    <PdfViewer fileUrl={document.file_path} />
-  ) : (
-    <div className="p-4 text-center text-sm text-slate-500">
-      PDF 경로를 찾을 수 없습니다.
-    </div>
-  )
 
   // With document: Render responsive layout
   return (
@@ -265,13 +277,33 @@ function ChatComponent() {
         </div>
 
         {/* Mobile Tab Content */}
-        <div className="flex-1 overflow-hidden">
-          {mobileTab === 'chat' && chatArea}
-          {mobileTab === 'summary' && (
-            <div className="h-full overflow-y-auto">{summaryPanelContent}</div>
+        <div className="flex-1 overflow-hidden relative">
+          <div className={clsx(
+            "absolute inset-0",
+            mobileTab === 'chat' ? "z-10" : "z-0 pointer-events-none opacity-0"
+          )}>
+            {chatArea}
+          </div>
+          {summary && (
+            <div className={clsx(
+              "absolute inset-0 overflow-y-auto",
+              mobileTab === 'summary' ? "z-10" : "z-0 pointer-events-none opacity-0"
+            )}>
+              <DocumentSummary summary={summary} />
+            </div>
           )}
-          {mobileTab === 'pdf' && (
-            <div className="h-full overflow-y-auto">{pdfPanelContent}</div>
+          {document?.file_path && (
+            <div className={clsx(
+              "absolute inset-0",
+              mobileTab === 'pdf' ? "z-10" : "z-0 pointer-events-none opacity-0"
+            )}>
+              <PdfViewer fileUrl={document.file_path} />
+            </div>
+          )}
+          {mobileTab === 'pdf' && !document?.file_path && (
+            <div className="p-4 text-center text-sm text-slate-500">
+              PDF 경로를 찾을 수 없습니다.
+            </div>
           )}
         </div>
       </div>
